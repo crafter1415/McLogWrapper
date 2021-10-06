@@ -23,6 +23,7 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 	String dependencies[];
 	double dependencies_version[];
 	Extension dep_extension[];
+	Extension use_extension[];
 	double major_version;
 	int currentState;
 
@@ -34,6 +35,8 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 	boolean isConfigLoaded;
 	Config config;
 	boolean isOverrided;
+	boolean isPreInitialized;
+	boolean isPostInitialized;
 
 	public Extension(File source, Class<?> base) {
 		this.source=source;
@@ -50,6 +53,9 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 			}
 			if (clazz.equals(Initializable.class)) {
 				isInitializable=true;
+				isOverrided=false;
+				isPreInitialized=false;
+				isPostInitialized=false;
 			}
 			if (clazz.equals(UseConfig.class)) {
 				isConfigLoaded=false;
@@ -166,6 +172,7 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 	public void override() {
 		checkState();
 		// 循環参照が存在しないことが保証されている
+		// なおかつ依存する拡張機能が全て読み込み済みであることも保証されている
 		if (isOverrided) return;
 		for (Extension extension : dep_extension) {
 			extension.override();
@@ -175,11 +182,31 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 		}
 		isOverrided=true;
 	}
-	public void initialize() {
+	public void preInitialize() {
 		checkState();
-		if (isInitializable) {
-			((Initializable)instance).initialize();
+		// 循環参照が存在しないことが保証されている
+		// なおかつ依存する拡張機能が全て読み込み済みであることも保証されている
+		if (isPreInitialized) return;
+		for (Extension extension : dep_extension) {
+			extension.preInitialize();
 		}
+		if (isInitializable) {
+			((Initializable)instance).preInitialize();
+		}
+		isPreInitialized=true;
+	}
+	public void postInitialize() {
+		checkState();
+		// 循環参照が存在しないことが保証されている
+		// なおかつ依存する拡張機能が全て読み込み済みであることも保証されている
+		if (isPostInitialized) return;
+		for (Extension extension : use_extension) {
+			extension.postInitialize();
+		}
+		if (isInitializable) {
+			((Initializable)instance).postInitialize();
+		}
+		isPostInitialized=true;
 	}
 
 	public int compareTo(Extension o) {

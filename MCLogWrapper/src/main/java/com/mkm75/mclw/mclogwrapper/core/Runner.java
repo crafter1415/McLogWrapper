@@ -10,6 +10,9 @@ import com.mkm75.mclw.mclogwrapper.base.ProcessWriter;
 import com.mkm75.mclw.mclogwrapper.extensions.Extensions;
 
 public class Runner {
+
+	public static String SERVER = "./server.jar";
+
 	public static void main(String args[]) {
 		try {
 			Extensions.load();
@@ -21,7 +24,7 @@ public class Runner {
 			arg2.add("-Xms"+Xms+"m");
 			arg2.add("-Xmx"+Xmx+"m");
 			arg2.add("-jar");
-			arg2.add("server.jar");
+			arg2.add(SERVER);
 			arg2.add("nogui");
 
 			ProcessBuilder builder = new ProcessBuilder(arg2);
@@ -53,7 +56,7 @@ public class Runner {
 			process.waitFor();
 
 			rt.removeShutdownHook(hook);
-			Extensions.extensions.forEach(e->new Thread(e::onStop).start());
+			Extensions.extensions.values().forEach(e->new Thread(e::onStop).start());
 			outThread.interrupt();
 			writeThread.interrupt();
 		} catch (IOException e) {

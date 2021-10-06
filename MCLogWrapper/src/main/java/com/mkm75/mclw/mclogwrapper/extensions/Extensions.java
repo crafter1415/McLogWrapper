@@ -11,6 +11,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -63,8 +64,8 @@ public class Extensions {
 		}
 	}
 
-	public static List<Extension> extensions = new ArrayList<>();
-	public static List<Extension> extensions_sub = new ArrayList<>();
+	private static List<Extension> extensions_dummy = new ArrayList<>();
+	public static Map<String, Extension> extensions = new HashMap<>();
 
 	public static void load() {
 		System.out.println("[ExtensionLoader] プラグイン読み込み開始");
@@ -75,7 +76,7 @@ public class Extensions {
 		// 重複・依存の確認
 		Map<String, Extension> extensions = new HashMap<>();
 		Map<String, List<Extension>> dupes = new HashMap<>();
-		for (Extension extension : Extensions.extensions) {
+		for (Extension extension : extensions_dummy) {
 			if (extensions.containsKey(extension.id)) {
 				if (dupes.containsKey(extension.id)) {
 					dupes.put(extension.id, new ArrayList<>());
@@ -89,7 +90,7 @@ public class Extensions {
 		}
 		Map<String, List<String>> missings = new HashMap<>();
 		Map<String, List<Pair<String, Double>>> req_versions = new HashMap<>();
-		for (Extension extension : Extensions.extensions) {
+		for (Extension extension : extensions_dummy) {
 			for (int i=0;i<extension.dependencies.length;i++) {
 				String s = extension.dependencies[i];
 				if (!extensions.containsKey(s)) {
@@ -99,23 +100,35 @@ public class Extensions {
 					}
 					missings.get(s).add(extension.id);
 				} else {
-					if (extension.dependencies_version[i] != extension.major_version) {
-						if (!req_versions.containsKey(s)) {
-							req_versions.put(s, new ArrayList<>());
+					if (extension.dependencies_version[i] != extensions.get(s).major_version) {
+						if (!req_versions.containsKey(extension.id)) {
+							req_versions.put(extension.id, new ArrayList<>());
 						}
-						req_versions.get(s).add(new Pair<>(s, extension.dependencies_version[i]));
+						req_versions.get(extension.id).add(new Pair<>(extension.id, extension.dependencies_version[i]));
 					}
 					extension.dep_extension[i]=extensions.get(s);
 				}
 			}
 		}
-		Extensions.extensions_sub = new ArrayList<>(Extensions.extensions);
-		for (int i=0;i<Extensions.extensions.size();) {
-			if (Extensions.extensions.get(i).currentState == -1) {
-				Extensions.extensions.remove(i);
-				continue;
+		for (int i=0,size=extensions_dummy.size();i<size;i++) {
+			Extension extension = extensions_dummy.get(i);
+			if (extension.currentState != -1) {
+				Extensions.extensions.put(extension.id, extension);
 			}
-			i++;
+		}
+		{
+			Map<Extension, List<Extension>> check_dep = new HashMap<>();
+			for (Extension extension : Extensions.extensions.values()) {
+				check_dep.put(extension, new ArrayList<>());
+			}
+			for (Extension extension : Extensions.extensions.values()) {
+				for (Extension extension2 : extension.dep_extension) {
+					check_dep.get(extension2).add(extension);
+				}
+			}
+			for (Entry<Extension, List<Extension>> set : check_dep.entrySet()) {
+				set.getKey().use_extension = set.getValue().toArray(new Extension[set.getValue().size()]);
+			}
 		}
 		missings.forEach((s, l)->{
 			System.out.println("[ExtensionLoader] プラグイン "+s+" が存在しないため以下のプラグインが読み込まれませんでした: ");
@@ -131,11 +144,11 @@ public class Extensions {
 		});
 		// インスタンスの作成
 		// これ自体は何も行わないことを推奨している
-		for (Extension extension : Extensions.extensions) {
+		for (Extension extension : Extensions.extensions.values()) {
 			extension.load();
 		}
 		// コンフィグの割り当て
-		List<Extension> configuring_extensions = Extensions.extensions.stream().filter(e->e.useConfig).collect(Collectors.toList());
+		List<Extension> configuring_extensions = Extensions.extensions.values().stream().filter(e->e.useConfig).collect(Collectors.toList());
 		JsonObject jo;
 		{
 			if (Settings.ConfigFile.exists()) {
@@ -173,14 +186,17 @@ public class Extensions {
 		for (Extension extension : configuring_extensions) {
 			extension.onConfigLoaded();
 		}
-		for (Extension extension : Extensions.extensions) {
+		for (Extension extension : Extensions.extensions.values()) {
 			extension.setInstances();
 		}
-		for (Extension extension : Extensions.extensions) {
+		for (Extension extension : Extensions.extensions.values()) {
 			extension.override();
 		}
-		for (Extension extension : Extensions.extensions) {
-			extension.initialize();
+		for (Extension extension : Extensions.extensions.values()) {
+			extension.preInitialize();
+		}
+		for (Extension extension : Extensions.extensions.values()) {
+			extension.postInitialize();
 		}
 		System.out.println("[ExtensionLoader] プラグイン読み込み終了");
 	}
@@ -207,7 +223,7 @@ public class Extensions {
 						Annotation annotations[] = loaded.getAnnotations();
 						for (Annotation annotation : annotations) {
 							if (annotation.annotationType().equals(LogWrapperExtension.class)) {
-								extensions.add(new Extension(file, loaded));
+								extensions_dummy.add(new Extension(file, loaded));
 							}
 						}
 					}
@@ -226,6 +242,13 @@ public class Extensions {
 	}
 
 	private static void loadSystemExtension() {
-		extensions.add(new Extension(null, CorePlugin.class));
+		extensions_dummy.add(new Extension(null, CorePlugin.class));
 	}
+
+	// -------------------------------
+
+	public static void override(String str, Object o) {
+
+	}
+
 }

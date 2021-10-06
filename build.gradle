@@ -6,3 +6,17 @@
  * user guide available at https://docs.gradle.org/4.3/userguide/java_library_plugin.html
  */
 
+allprojects {
+
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    sourceCompatibility = 8
+    targetCompatibility = 8
+
+    repositories {
+        jcenter()
+    }
+}

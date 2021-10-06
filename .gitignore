@@ -8,3 +8,6 @@ build
 .project
 .classpath
 .settings
+
+# debug folder, cuz of license
+/debug/

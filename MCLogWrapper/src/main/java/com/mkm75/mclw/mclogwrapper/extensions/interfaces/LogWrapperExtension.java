@@ -47,4 +47,6 @@ public @interface LogWrapperExtension {
 	double minor_version();
 	String[] requirements_name();
 	double[] requirements_version();
+	String version_info_site() default "";
+	boolean is_optional() default false;
 }

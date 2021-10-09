@@ -1,6 +1,7 @@
 package com.mkm75.mclw.mclogwrapper.extensions;
 
 import java.io.File;
+import java.util.function.Supplier;
 
 import com.google.gson.JsonObject;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.ConsoleInputConsumer;
@@ -25,6 +26,8 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 	Extension dep_extension[];
 	Extension use_extension[];
 	double major_version;
+	String version_site;
+	boolean is_optional;
 	int currentState;
 
 	Object instance;
@@ -70,6 +73,8 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 		dep_extension=new Extension[dependencies.length];
 		major_version=lwe.major_version();
 		dependencies_version=lwe.requirements_version();
+		version_site=lwe.version_info_site();
+		is_optional=lwe.is_optional();
 		currentState=0;
 		if (dependencies.length != dependencies_version.length) throw new IllegalArgumentException("@interface exception");
 	}
@@ -91,7 +96,7 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 				return false;
 			}
 			if (!extension.load()) {
-				System.out.println("[ExtensionLoader] 前提プラグイン "+extension.id+" が読み込みに失敗したため "+id+" は読み込まれませんでした");
+				if (!is_optional) System.out.println("[ExtensionLoader] 前提プラグイン "+extension.id+" が読み込みに失敗したため "+id+" は読み込まれませんでした");
 				return false;
 			}
 		}
@@ -108,27 +113,66 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 	}
 
 	protected void checkState() {
-		if (currentState != 2) throw new IllegalStateException();
+		if (!validate()) throw new IllegalStateException();
+	}
+
+	public boolean validate() {
+		if (currentState != 2) return false;
+		for (Extension extension : dep_extension) {
+			if (!extension.validate()) return false;
+		}
+		return true;
 	}
 
 	protected void checkType() {
 		if (!useConfig) throw new IllegalStateException();
 	}
 
+	protected void disable() {
+		currentState=-1;
+		for (Extension extension : use_extension) {
+			extension.disable();
+		}
+	}
+
+	protected void accept(Runnable runnable) {
+		try {
+			runnable.run();
+		} catch (RuntimeException e) {
+			disable();
+			System.err.println("[ExtensionProcessor] 関数 reserveConfigs() の処理中にハンドルされていない例外が投げられました");
+			System.err.println("[ExtensionProcessor] プラグイン "+id+" とそれに依存するプラグインは無効化されました");
+			System.err.println("[ExtensionProcessor] スタックトレース (開発者に投げると原因究明につながる可能性があります): ");
+			e.printStackTrace();
+		}
+	}
+	protected <T> T accept(Supplier<T> consumer) {
+		try {
+			return consumer.get();
+		} catch (RuntimeException e) {
+			disable();
+			System.err.println("[ExtensionProcessor] 関数 reserveConfigs() の処理中にハンドルされていない例外が投げられました");
+			System.err.println("[ExtensionProcessor] プラグイン "+id+" とそれに依存するプラグインは無効化されました");
+			System.err.println("[ExtensionProcessor] スタックトレース (開発者に投げると原因究明につながる可能性があります): ");
+			e.printStackTrace();
+			return null;
+		}
+	}
+
 	public Config reserveConfigs() {
 		checkState();
 		checkType();
 		if (isConfigLoaded) throw new IllegalStateException("Config already loaded");
-		return ((UseConfig)instance).reserveConfigs();
+		return accept(()->((UseConfig)instance).reserveConfigs());
 	}
 	public void onConfigLoaded() {
 		checkState();
-		((UseConfig)instance).onConfigLoaded();
+		accept(()->((UseConfig)instance).onConfigLoaded());
 	}
 	public void loadConfig(JsonObject obj) {
 		checkState();
 		if (useConfig) {
-			config.load(obj);
+			accept(()->config.load(obj));;
 		}
 	}
 	public JsonObject saveConfig() {
@@ -140,33 +184,33 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 	public void consumeLog(String line) {
 		checkState();
 		if (isConsumeLog) {
-			((LogConsumer)instance).consumeLog(line);
+			accept(()->((LogConsumer)instance).consumeLog(line));
 		}
 	}
 
 	public void consumeConsoleIn(String line) {
 		checkState();
 		if (isConsumeConsoleIn) {
-			((ConsoleInputConsumer)instance).consumeConsoleIn(line);
+			accept(()->((ConsoleInputConsumer)instance).consumeConsoleIn(line));
 		}
 	}
 
 	public void onDone() {
 		checkState();
 		if (hasStateEvents) {
-			((ServerStateEvents)instance).onDone();
+			accept(()->((ServerStateEvents)instance).onDone());
 		}
 	}
 	public void onStop() {
 		checkState();
 		if (hasStateEvents) {
-			((ServerStateEvents)instance).onStop();
+			accept(()->((ServerStateEvents)instance).onStop());
 		}
 	}
 	public void setInstances() {
 		checkState();
 		if (isInitializable) {
-			((Initializable)instance).setInstances();
+			accept(()->((Initializable)instance).setInstances());
 		}
 	}
 	public void override() {
@@ -178,7 +222,7 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 			extension.override();
 		}
 		if (isInitializable) {
-			((Initializable)instance).override();
+			accept(()->((Initializable)instance).override());
 		}
 		isOverrided=true;
 	}
@@ -191,7 +235,7 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 			extension.preInitialize();
 		}
 		if (isInitializable) {
-			((Initializable)instance).preInitialize();
+			accept(()->((Initializable)instance).preInitialize());
 		}
 		isPreInitialized=true;
 	}
@@ -204,13 +248,17 @@ public class Extension implements LogConsumer, ConsoleInputConsumer, ServerState
 			extension.postInitialize();
 		}
 		if (isInitializable) {
-			((Initializable)instance).postInitialize();
+			accept(()->((Initializable)instance).postInitialize());
 		}
 		isPostInitialized=true;
 	}
 
 	public int compareTo(Extension o) {
 		return id.compareTo(o.id);
+	}
+
+	public Object getInstance() {
+		return instance;
 	}
 
 }

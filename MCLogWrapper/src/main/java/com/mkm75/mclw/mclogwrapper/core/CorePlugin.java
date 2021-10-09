@@ -21,7 +21,7 @@ public class CorePlugin implements Initializable, LogConsumer {
 
 	public static final String NAME="MCLWCore@mkm75";
 	public static final double MAJOR_VERSION=0;
-	public static final double MINOR_VERSION=1.1;
+	public static final double MINOR_VERSION=1.2;
 
 	/**
 	 * インスタンスを登録します。
@@ -52,7 +52,7 @@ public class CorePlugin implements Initializable, LogConsumer {
 		String buffer[] = line.split(" - ", 2);
 		if (buffer.length != 2) return;
 		if (buffer[1].startsWith("Done")) {
-			Extensions.extensions.values().parallelStream().forEach(Extension::onDone);
+			Extensions.doAllParallel(Extension::onDone);
 		}
 	}
 

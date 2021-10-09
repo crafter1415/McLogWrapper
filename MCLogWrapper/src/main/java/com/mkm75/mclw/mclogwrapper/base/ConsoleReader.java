@@ -68,7 +68,7 @@ public class ConsoleReader {
 				}
 				if (str == null) break;
 				writer.append(str);
-				Extensions.extensions.values().parallelStream().forEach(e->e.consumeConsoleIn(str));
+				Extensions.doAllParallel(e->e.consumeConsoleIn(str));
 			}
 			br.close();
 		} catch (IOException e) {

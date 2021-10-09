@@ -18,6 +18,7 @@ public class Config {
 		gson = new Gson();
 		isLoaded=false;
 		isModified=false;
+		jo = new JsonObject();
 		modified = new JsonObject();
 	}
 
@@ -44,12 +45,17 @@ public class Config {
 	}
 
 	public void load(JsonObject object) {
-		if (isLoaded) throw new IllegalStateException("Config already loaded");
 		isLoaded=true;
 		jo=object;
 	}
 	public JsonObject save() {
-		if (!isLoaded) throw new IllegalStateException("Config not loaded");
-		return jo;
+		JsonObject merged = new JsonObject();
+		for (String key : jo.keySet()) {
+			merged.add(key, jo.get(key));
+		}
+		for (String key : modified.keySet()) {
+			merged.add(key, modified.get(key));
+		}
+		return merged;
 	}
 }

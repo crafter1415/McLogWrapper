@@ -33,11 +33,12 @@ import com.mkm75.mclw.mclogwrapper.extensions.interfaces.LogWrapperExtension;
 public class BetterLogging implements Initializable {
 
 	public static final double MAJOR_VERSION=0;
-	public static final double MINOR_VERSION=1.0;
+	public static final double MINOR_VERSION=1.1;
 	public static final String NAME="BetterLogging@mkm75";
 
 	public static final String REGEX="<mAw99vWVcx6u56>";
 	public static final byte SIGNATURE[]= {0x6D, 0x6B, 0x75};
+	public static final String SERVER_NAME="./server_btlg.bin";
 
 	public void setInstances() {
 
@@ -55,13 +56,17 @@ public class BetterLogging implements Initializable {
 		System.out.println("[BetterLogging] 読み込み開始");
 		init:
 		try {
+			File server_btlg = new File(SERVER_NAME);
 			check:
 			{
-				BufferedInputStream bis = new BufferedInputStream(new FileInputStream(new File(Runner.SERVER)));
+				if (!server_btlg.exists()) break check;
+				BufferedInputStream bis = new BufferedInputStream(new FileInputStream(server_btlg));
 				byte buf[] = new byte[SIGNATURE.length];
 				bis.read(buf);
 				if (!Arrays.equals(SIGNATURE, buf)) break check;
-				int sum=bis.read();
+				byte sum=(byte)bis.read();
+				bis.close();
+				bis = new BufferedInputStream(new FileInputStream(Runner.SERVER));
 				buf=new byte[8192];
 				byte sum2=0;
 				while (true) {
@@ -77,7 +82,7 @@ public class BetterLogging implements Initializable {
 			}
 			System.out.println("[BetterLogging] 出力取得最適化のための初期化を行います");
 			System.out.println("[BetterLogging] この作業には少し時間がかかります");
-			System.out.println("[BetterLogging] この作業によりserver.jarはBetterLogging専用となります。元のファイルはserver.bakに改名されます");
+			System.out.println("[BetterLogging] この作業によりBetterLoggingに特化されたserver_btlg.binが作成されます");
 			// require initialize
 			// reset pos ... to close once
 
@@ -105,7 +110,6 @@ public class BetterLogging implements Initializable {
 					}
 				}
 				zis.close();
-				Files.copy(new File(Runner.SERVER), new File("./server.bak"));
 			}
 			System.out.println("[BetterLogging] 豆を挽いています...");
 			{
@@ -147,7 +151,7 @@ public class BetterLogging implements Initializable {
 				compress(new File("./"+filename), temp1);
 				byte sum=0;
 				{
-					BufferedInputStream bis = new BufferedInputStream(new FileInputStream(temp1));
+					BufferedInputStream bis = new BufferedInputStream(new FileInputStream(Runner.SERVER));
 					byte buf[] = new byte[8192];
 					while (true) {
 						int len = bis.read(buf);
@@ -159,7 +163,7 @@ public class BetterLogging implements Initializable {
 					bis.close();
 				}
 				BufferedInputStream bis = new BufferedInputStream(new FileInputStream(temp1));
-				BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(Runner.SERVER));
+				BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(SERVER_NAME));
 				byte buf[] = new byte[8192];
 				bos.write(SIGNATURE);
 				bos.write(sum);
@@ -178,6 +182,7 @@ public class BetterLogging implements Initializable {
 			throw new RuntimeException(e);
 		}
 		Langs.load();
+		Runner.SERVER = SERVER_NAME;
 		System.out.println("[BetterLogging] 読み込みは正常に終了しました");
 	}
 

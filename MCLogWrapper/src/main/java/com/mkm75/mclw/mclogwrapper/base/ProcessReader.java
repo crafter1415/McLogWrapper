@@ -52,7 +52,7 @@ public class ProcessReader {
 			String str;
 			while ((str = br.readLine()) != null) {
 				final String buffer = str;
-				Extensions.extensions.values().parallelStream().forEach(e->e.consumeLog(buffer));
+				Extensions.doAllParallel(e->e.consumeLog(buffer));
 			}
 			br.close();
 		} catch (IOException e) {

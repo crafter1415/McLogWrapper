@@ -16,4 +16,7 @@ include 'services:webservice'
 */
 
 rootProject.name = '_root_mclw'
-include 'MCLogWrapper', 'testPlugin', 'BetterLogging'
+include 'MCLogWrapper'
+include 'testPlugin'
+include 'BetterLogging'
+include 'LangUtil'

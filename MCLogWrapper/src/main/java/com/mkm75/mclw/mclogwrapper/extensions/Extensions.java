@@ -1,7 +1,10 @@
 package com.mkm75.mclw.mclogwrapper.extensions;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.URL;
@@ -12,11 +15,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mkm75.mclw.mclogwrapper.core.CorePlugin;
@@ -64,6 +69,7 @@ public class Extensions {
 		}
 	}
 
+	// セキュリティー上の観点からこの辺は後々変えるかもしれない。
 	private static List<Extension> extensions_dummy = new ArrayList<>();
 	public static Map<String, Extension> extensions = new HashMap<>();
 
@@ -95,10 +101,12 @@ public class Extensions {
 				String s = extension.dependencies[i];
 				if (!extensions.containsKey(s)) {
 					extension.currentState=-1;
-					if (!missings.containsKey(s)) {
-						missings.put(s, new ArrayList<>());
+					if (!extension.is_optional) {
+						if (!missings.containsKey(s)) {
+							missings.put(s, new ArrayList<>());
+						}
+						missings.get(s).add(extension.id);
 					}
-					missings.get(s).add(extension.id);
 				} else {
 					if (extension.dependencies_version[i] != extensions.get(s).major_version) {
 						if (!req_versions.containsKey(extension.id)) {
@@ -153,7 +161,7 @@ public class Extensions {
 		{
 			if (Settings.ConfigFile.exists()) {
 				try {
-					FileReader reader = new FileReader(Settings.ConfigFile);
+					BufferedReader reader = new BufferedReader(new FileReader(Settings.ConfigFile));
 					Gson gson = new Gson();
 					jo = gson.fromJson(reader, JsonObject.class);
 				} catch (IOException e) {
@@ -161,9 +169,8 @@ public class Extensions {
 					System.exit(1);
 					return; // 本来到達しえない
 				} catch (JsonParseException e) {
-					e.printStackTrace();
-					System.exit(1);
-					return; // が、ランタイムの終了のなんやかんやが不確実なのかコンパイル時はこれがないとエラー
+					System.out.println("[ConfigLoader] 既存コンフィグの読み込みに失敗しました");
+					jo = new JsonObject();
 				}
 			} else {
 				jo = new JsonObject();
@@ -178,27 +185,42 @@ public class Extensions {
 			JsonObject ext_base = jo.get(extension.id).getAsJsonObject();
 			for (String key : jo2.keySet()) {
 				if (!ext_base.has(key)) {
-					ext_base.add(key, jo.get(key));
+					ext_base.add(key, jo2.get(key));
 				}
 			}
 			config.load(ext_base);
+			extension.config=config;
 		}
-		for (Extension extension : configuring_extensions) {
-			extension.onConfigLoaded();
+		if (!Settings.ConfigFile.exists()) {
+			save_configs();
 		}
-		for (Extension extension : Extensions.extensions.values()) {
-			extension.setInstances();
-		}
-		for (Extension extension : Extensions.extensions.values()) {
-			extension.override();
-		}
-		for (Extension extension : Extensions.extensions.values()) {
-			extension.preInitialize();
-		}
-		for (Extension extension : Extensions.extensions.values()) {
-			extension.postInitialize();
-		}
+		doAll(e->{
+			if (e.useConfig) e.onConfigLoaded();
+		});
+		doAll(Extension::setInstances);
+		doAll(Extension::override);
+		doAll(Extension::preInitialize);
+		doAll(Extension::postInitialize);
 		System.out.println("[ExtensionLoader] プラグイン読み込み終了");
+	}
+
+	public static void save_configs() {
+		JsonObject jo = new JsonObject();
+		for (Extension extension : extensions.values()) {
+			if (!extension.useConfig) continue;
+			jo.add(extension.id, extension.config.save());
+		}
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter(Settings.ConfigFile));
+			gson.toJson(jo, bw);
+			bw.flush();
+		} catch (IOException e) {
+			System.err.println("[ConfigLoader] コンフィグの保存に失敗しました");
+			e.printStackTrace();
+			return;
+		}
+		System.out.println("[ConfigLoader] コンフィグが保存されました");
 	}
 
 	private static void loadDir(File dir) {
@@ -245,10 +267,23 @@ public class Extensions {
 		extensions_dummy.add(new Extension(null, CorePlugin.class));
 	}
 
-	// -------------------------------
+	public static void doAll(Consumer<Extension> consumer) {
+		for (Extension extension : extensions_dummy) {
+			if (!extension.validate()) {
+				if (extensions.containsKey(extension.id)) extensions.remove(extension.id);
+				continue;
+			}
+			try {
+				consumer.accept(extension);
+			} catch (RuntimeException e) {
+				continue;
+			}
+		}
+	}
 
-	public static void override(String str, Object o) {
-
+	// @Async
+	public static void doAllParallel(Consumer<Extension> consumer) {
+		doAll(e->new Thread(()->consumer.accept(e)).start());
 	}
 
 }

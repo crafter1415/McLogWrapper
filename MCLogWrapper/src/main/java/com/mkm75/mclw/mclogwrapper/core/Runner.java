@@ -38,7 +38,7 @@ public class Runner {
 			Thread hook = new Thread(()->{
 				System.out.println("[MCLogWrapper] 親プロセスの強制終了を検出しました。子プロセスの終了を試みます...");
 				process.destroyForcibly();
-				System.out.println("[MCLogWrapper] 成功");
+				Extensions.save_configs();
 			});
 			rt.addShutdownHook(hook);
 			ic.setStream(System.in);
@@ -59,6 +59,7 @@ public class Runner {
 			Extensions.extensions.values().forEach(e->new Thread(e::onStop).start());
 			outThread.interrupt();
 			writeThread.interrupt();
+			Extensions.save_configs();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {

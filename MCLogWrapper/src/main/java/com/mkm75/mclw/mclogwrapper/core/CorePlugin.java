@@ -21,7 +21,7 @@ public class CorePlugin implements Initializable, LogConsumer {
 
 	public static final String NAME="MCLWCore@mkm75";
 	public static final double MAJOR_VERSION=0;
-	public static final double MINOR_VERSION=1.2;
+	public static final double MINOR_VERSION=1.3;
 
 	/**
 	 * インスタンスを登録します。

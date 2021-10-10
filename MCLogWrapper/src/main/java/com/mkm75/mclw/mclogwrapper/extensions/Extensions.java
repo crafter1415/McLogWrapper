@@ -3,12 +3,14 @@ package com.mkm75.mclw.mclogwrapper.extensions;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -161,9 +163,9 @@ public class Extensions {
 		{
 			if (Settings.ConfigFile.exists()) {
 				try {
-					BufferedReader reader = new BufferedReader(new FileReader(Settings.ConfigFile));
+					BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(Settings.ConfigFile), StandardCharsets.UTF_8));
 					Gson gson = new Gson();
-					jo = gson.fromJson(reader, JsonObject.class);
+					jo = gson.fromJson(br, JsonObject.class);
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.exit(1);

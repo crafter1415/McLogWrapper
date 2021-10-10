@@ -4,8 +4,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
@@ -15,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.mkm75.mclw.betterlogging.Langs;
 import com.mkm75.mclw.mclogwrapper.core.Runner;
 import com.mkm75.mclw.mclogwrapper.extensions.Config;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.Initializable;
@@ -26,7 +28,7 @@ import com.mkm75.mclw.mclogwrapper.extensions.interfaces.UseConfig;
 public class LangUtil implements Initializable, UseConfig {
 
 	public static final double MAJOR_VERSION=0;
-	public static final double MINOR_VERSION=1;
+	public static final double MINOR_VERSION=1.1;
 	public static final String NAME="LangUtil@mkm75";
 
 	Config config;
@@ -97,7 +99,7 @@ public class LangUtil implements Initializable, UseConfig {
 				File file = new File(mc_home+"/versions/"+mc_ver+"/"+mc_ver+".json");
 				if (!file.exists()) break check;
 				try {
-					BufferedReader br = new BufferedReader(new FileReader(file));
+					BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
 					JsonObject jo = gson.fromJson(br, JsonObject.class);
 					if (!hash.equalsIgnoreCase(jo.get("downloads").getAsJsonObject().get("server").getAsJsonObject().get("sha1").getAsString())) break check;
 				} catch (IOException e) {
@@ -116,12 +118,9 @@ public class LangUtil implements Initializable, UseConfig {
 				for (String str : base.list()) {
 					try {
 						File file = new File(base.toString()+"/"+str+"/"+str+".json");
-						// btw, did you know about this?
-						// new BufferedReader(new FileReader(file)) is same with
-						// new BufferedReader(new InputStreamReader(new FileInputStream(file)))
-						// idk which is better about adding BufferedInputStream between those...
-						BufferedReader br = new BufferedReader(new FileReader(file));
-						// also, I'm not sure about this resource work closed:/
+						// okay I just know about charset and longer one was better
+						BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
+						// But I'm still not sure about this resource work closed:/
 						JsonObject jo = gson.fromJson(br, JsonObject.class);
 						if (!hash.equalsIgnoreCase(jo.get("downloads").getAsJsonObject().get("server").getAsJsonObject().get("sha1").getAsString())) continue;
 						mc_ver=jo.get("id").getAsString();
@@ -148,6 +147,7 @@ public class LangUtil implements Initializable, UseConfig {
 			throw new RuntimeException(e);
 		}
 		config.set("version", mc_ver);
+		if (config.get("lang", String.class) != null) Langs.language=config.get("lang", String.class);
 		System.out.println("[LangUtil] 読み込み完了");
 	}
 
@@ -170,6 +170,7 @@ public class LangUtil implements Initializable, UseConfig {
 				config.reserve("mc_home", "undefined");
 			}
 		}
+		config.reserve("lang", "en_us");
 		return config;
 	}
 }

@@ -20,3 +20,5 @@ include 'MCLogWrapper'
 include 'testPlugin'
 include 'BetterLogging'
 include 'LangUtil'
+include 'MCDiscordIntegration'
+

@@ -7,10 +7,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Map.Entry;
 
 import com.google.common.io.Files;
@@ -49,11 +49,11 @@ public class BetterLoggingIntegr implements Initializable {
 				Gson gson = new Gson();
 				String assetIndex;
 				{
-					BufferedReader br = new BufferedReader(new FileReader(new File(lu.mc_home+"/versions/"+lu.mc_ver+"/"+lu.mc_ver+".json")));
+					BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(lu.mc_home+"/versions/"+lu.mc_ver+"/"+lu.mc_ver+".json")), StandardCharsets.UTF_8));
 					JsonObject jo = gson.fromJson(br, JsonObject.class);
 					assetIndex=jo.get("assetIndex").getAsJsonObject().get("id").getAsString();
 				}
-				BufferedReader br = new BufferedReader(new FileReader(new File(lu.mc_home+"/assets/indexes/"+assetIndex+".json")));
+				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(lu.mc_home+"/assets/indexes/"+assetIndex+".json")), StandardCharsets.UTF_8));
 				JsonObject jo = gson.fromJson(br, JsonObject.class);
 				for (Entry<String, JsonElement> entries : jo.get("objects").getAsJsonObject().entrySet()) {
 					if (!entries.getKey().contains("lang/")) continue;
@@ -85,8 +85,8 @@ public class BetterLoggingIntegr implements Initializable {
 	protected static void convert1(File file) throws IOException {
 		File buffer = new File(file.toString().substring(0, file.toString().lastIndexOf('.'))+".json");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer))));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer)), StandardCharsets.UTF_8));
 		JsonObject jo2 = new JsonObject();
 		while (true) {
 			String str = br.readLine();
@@ -103,8 +103,8 @@ public class BetterLoggingIntegr implements Initializable {
 	protected static void convert2(File file) throws IOException {
 		File buffer = new File(file.toString()+".tmp");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer))));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer)), StandardCharsets.UTF_8));
 		JsonObject jo = gson.fromJson(br, JsonObject.class);
 		JsonObject jo2 = new JsonObject();
 		for (Entry<String, JsonElement> entry : jo.entrySet()) {

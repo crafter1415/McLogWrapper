@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
@@ -33,7 +34,7 @@ import com.mkm75.mclw.mclogwrapper.extensions.interfaces.LogWrapperExtension;
 public class BetterLogging implements Initializable {
 
 	public static final double MAJOR_VERSION=0;
-	public static final double MINOR_VERSION=1.1;
+	public static final double MINOR_VERSION=1.2;
 	public static final String NAME="BetterLogging@mkm75";
 
 	public static final String REGEX="<mAw99vWVcx6u56>";
@@ -226,8 +227,8 @@ public class BetterLogging implements Initializable {
 
 	protected static void format1(File file) throws IOException {
 		File buffer = new File(file.toString()+".tmp");
-		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer))));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer)), StandardCharsets.UTF_8));
 		while (true) {
 			String str = br.readLine();
 			if (str == null) break;
@@ -260,8 +261,8 @@ public class BetterLogging implements Initializable {
 	protected static void format2(File file) throws IOException {
 		File buffer = new File(file.toString()+".tmp");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer))));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer)), StandardCharsets.UTF_8));
 		JsonObject jo = gson.fromJson(br, JsonObject.class);
 		JsonObject jo2 = new JsonObject();
 		for (Entry<String, JsonElement> entry : jo.entrySet()) {
@@ -288,8 +289,8 @@ public class BetterLogging implements Initializable {
 	protected static void convert1(File file) throws IOException {
 		File buffer = new File(file.toString().substring(0, file.toString().lastIndexOf('.'))+".json");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer))));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer)), StandardCharsets.UTF_8));
 		JsonObject jo2 = new JsonObject();
 		while (true) {
 			String str = br.readLine();
@@ -306,8 +307,8 @@ public class BetterLogging implements Initializable {
 	protected static void convert2(File file) throws IOException {
 		File buffer = new File(file.toString()+".tmp");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer))));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(buffer)), StandardCharsets.UTF_8));
 		JsonObject jo = gson.fromJson(br, JsonObject.class);
 		JsonObject jo2 = new JsonObject();
 		for (Entry<String, JsonElement> entry : jo.entrySet()) {

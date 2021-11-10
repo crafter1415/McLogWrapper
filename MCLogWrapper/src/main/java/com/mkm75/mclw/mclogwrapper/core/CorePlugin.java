@@ -49,7 +49,7 @@ public class CorePlugin implements Initializable, LogConsumer {
 	 */
 	public void consumeLog(String line) {
 		System.out.println(line);
-		String buffer[] = line.split(" - ", 2);
+		String buffer[] = line.split(": ", 2);
 		if (buffer.length != 2) return;
 		if (buffer[1].startsWith("Done")) {
 			Extensions.doAllParallel(Extension::onDone);

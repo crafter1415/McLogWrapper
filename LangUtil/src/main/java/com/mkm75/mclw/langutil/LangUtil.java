@@ -16,7 +16,6 @@ import java.security.NoSuchAlgorithmException;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.mkm75.mclw.betterlogging.Langs;
 import com.mkm75.mclw.mclogwrapper.core.Runner;
 import com.mkm75.mclw.mclogwrapper.extensions.Config;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.Initializable;
@@ -138,6 +137,7 @@ public class LangUtil implements Initializable, UseConfig {
 				}
 			}
 			version_changed=true;
+			config.set("version", mc_ver);
 		} catch (NoSuchAlgorithmException e) {
 			// RuntimeExceptionでいいだろ!!!!!!
 
@@ -146,8 +146,6 @@ public class LangUtil implements Initializable, UseConfig {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		config.set("version", mc_ver);
-		if (config.get("lang", String.class) != null) Langs.language=config.get("lang", String.class);
 		System.out.println("[LangUtil] 読み込み完了");
 	}
 

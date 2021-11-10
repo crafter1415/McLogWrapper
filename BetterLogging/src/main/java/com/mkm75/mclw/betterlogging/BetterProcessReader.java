@@ -18,14 +18,27 @@ public class BetterProcessReader extends ProcessReader {
 			while ((str = br.readLine()) != null) {
 				check:
 				{
+					// ここから自分で見ても引くほど分からんのでバリバリコメントしていくわよ
+
+					// 本文の前後で切る
 					String buf0[] = str.split("]: ", 2);
+					// 本文無しで抜ける
 					if (buf0.length == 1) break check;
-					String buf1[] = buf0[1].split(BetterLogging.REGEX);
+					// 本文を翻訳名と引数に分ける
+					String buf1[] = buf0[1].split(BetterLogging.REGEX, 2);
+					// 翻訳できないなら抜ける
 					if (!Langs.isLocalizable(buf1[0])) break check;
-					String buf2[] = new String[buf1.length-1];
-					System.arraycopy(buf1, 1, buf2, 0, buf2.length);
+					// 引数のみの配列
+					String buf2[];
+					if (buf1.length == 1) {
+						buf2=new String[0];
+					} else {
+						buf2=buf1[1].split(BetterLogging.REGEX);
+					}
+					// 時刻とログ情報に分ける
 					String buf3[] = buf0[0].split("\\] \\[", 2);
 					if (buf3.length == 1) break check;
+					// スレッドとレベルに分ける
 					String buf4[] = buf3[1].split("/", 2);
 					if (buf4.length == 1) break check;
 					LogEvent event = new LogEvent(buf3[0].substring(1), buf4[0], buf4[1], buf1[0], buf2);

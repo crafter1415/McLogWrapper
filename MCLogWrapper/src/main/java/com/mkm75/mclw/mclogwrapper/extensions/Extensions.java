@@ -4,10 +4,14 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -32,9 +36,12 @@ import com.mkm75.mclw.mclogwrapper.extensions.interfaces.LogWrapperExtension;
 public class Extensions {
 
 	public static final class Settings {
-		public static File ConfigFile = new File("./config.json");
-		public static File PluginFolder = new File("./plugins/");
+		public static final File ConfigFile = new File("./config.json");
+		public static final File PluginFolder = new File("./plugins/");
+		public static final File LibraryFolder = new File("./lib/");
 	}
+
+	private static JsonObject config;
 
 	// 汎用クラス コピペ用
 	public static class Pair<K, V> {
@@ -76,6 +83,9 @@ public class Extensions {
 	public static Map<String, Extension> extensions = new HashMap<>();
 
 	public static void load() {
+		System.out.println("[ExtensionLoader] ライブラリ読み込み開始");
+		if (!Settings.LibraryFolder.exists()) Settings.LibraryFolder.mkdir();
+		loadLib(Settings.LibraryFolder);
 		System.out.println("[ExtensionLoader] プラグイン読み込み開始");
 		loadSystemExtension();
 		if (!Settings.PluginFolder.exists()) Settings.PluginFolder.mkdir();
@@ -178,20 +188,27 @@ public class Extensions {
 				jo = new JsonObject();
 			}
 		}
+		boolean configChanged = false;
 		for (Extension extension : configuring_extensions) {
 			Config config = extension.reserveConfigs();
 			JsonObject jo2 = config.save();
 			if (!jo.has(extension.id)) {
+				configChanged=true;
 				jo.add(extension.id, jo2);
 			}
 			JsonObject ext_base = jo.get(extension.id).getAsJsonObject();
 			for (String key : jo2.keySet()) {
 				if (!ext_base.has(key)) {
+					configChanged=true;
 					ext_base.add(key, jo2.get(key));
 				}
 			}
 			config.load(ext_base);
 			extension.config=config;
+		}
+		config=jo.deepCopy();
+		if (configChanged) {
+			save_configs();
 		}
 		if (!Settings.ConfigFile.exists()) {
 			save_configs();
@@ -207,14 +224,15 @@ public class Extensions {
 	}
 
 	public static void save_configs() {
-		JsonObject jo = new JsonObject();
+		JsonObject jo = config.deepCopy();
 		for (Extension extension : extensions.values()) {
 			if (!extension.useConfig) continue;
+			if (!extension.config.isModified) continue;
 			jo.add(extension.id, extension.config.save());
 		}
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		try {
-			BufferedWriter bw = new BufferedWriter(new FileWriter(Settings.ConfigFile));
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(Settings.ConfigFile), StandardCharsets.UTF_8));
 			gson.toJson(jo, bw);
 			bw.flush();
 		} catch (IOException e) {
@@ -225,43 +243,121 @@ public class Extensions {
 		System.out.println("[ConfigLoader] コンフィグが保存されました");
 	}
 
+
 	private static void loadDir(File dir) {
-		File list[] = dir.listFiles();
-		for (File file : list) {
-			if (file.isDirectory()) {
-				loadDir(dir);
-			} else {
-				if (!file.toString().substring(file.toString().lastIndexOf('.')).equals(".jar")) continue;
-				try {
-					JarFile jf = new JarFile(file);
-					URL buffer[] = new URL[1];
-					buffer[0]=file.toURI().toURL();
-					URLClassLoader loader = new URLClassLoader(buffer);
-					Enumeration<JarEntry> entries = jf.entries();
-					while (entries.hasMoreElements()) {
+		List<URL> list = new ArrayList<>();
+		loadDir0(dir, list);
+
+		List<URL> list1 = new ArrayList<>();
+		URLClassLoader cl = new URLClassLoader(list.toArray(new URL[list.size()]));
+		file:
+		for (URL url : list) {
+			try {
+				JarFile jf = new JarFile(url.getFile());
+				Enumeration<JarEntry> entries = jf.entries();
+				while (entries.hasMoreElements()) {
+					try {
 						JarEntry entry = entries.nextElement();
 						if (entry.isDirectory()) continue;
 						if (!entry.toString().toLowerCase().endsWith(".class")) continue;
 						String name=entry.toString().substring(0, entry.toString().length()-6).replace('/', '.');
-						Class<?> loaded = loader.loadClass(name);
+						Class<?> loaded = cl.loadClass(name);
 						Annotation annotations[] = loaded.getAnnotations();
 						for (Annotation annotation : annotations) {
 							if (annotation.annotationType().equals(LogWrapperExtension.class)) {
-								extensions_dummy.add(new Extension(file, loaded));
+								extensions_dummy.add(new Extension(new File(url.getFile()), loaded));
 							}
 						}
+					} catch (LinkageError e) {
+						System.out.println("[ClassLoader] Exception occured while loading "+url.getFile());
+						e.printStackTrace();
+						continue file;
+					} catch (ClassNotFoundException e) {
+						continue;
 					}
-					loader.close();
-					jf.close();
-				} catch (IOException e) {
-					System.err.println("ファイルの読み込み中に例外が発生しました: \n");
-					e.printStackTrace();
-				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
-				} catch (IllegalArgumentException e) {
+				}
+				list1.add(url);
+				jf.close();
+			} catch (IOException e1) {
+				continue;
+			}
+		}
+		try {
+			cl.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			URLClassLoader cl2 = (URLClassLoader) ClassLoader.getSystemClassLoader();
+			Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+			method.setAccessible(true);
+			for (URL url : list1) {
+				try {
+					method.invoke(cl2, url);
+				} catch (InvocationTargetException e) {
+					System.err.println("[LibraryLoader] ライブラリの読み込み時にエラーが発生しました");
 					e.printStackTrace();
 				}
 			}
+		} catch (SecurityException e) {
+			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			System.err.println("[LibraryLoader] 本ソフトはご利用のバージョンに未対応です");
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			System.err.println("[LibraryLoader] 不明なエラーが発生しました");
+			e.printStackTrace();
+		}
+	}
+	private static void loadDir0(File dir, List<URL> urls) {
+		if (dir.isDirectory()) {
+			for (File file : dir.listFiles()) {
+				loadDir0(file, urls);
+			}
+		} else {
+			String name = dir.getName();
+			if (!name.substring(name.indexOf('.')).equalsIgnoreCase(".jar")) return;
+			try {
+				urls.add(dir.toURI().toURL());
+			} catch (MalformedURLException e) {
+				return;
+			}
+		}
+	}
+
+	private static void loadLib(File dir) {
+		try {
+			URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
+			Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+			method.setAccessible(true);
+			for (File file : dir.listFiles()) {
+				try {
+					method.invoke(cl, file.toURI().toURL());
+				} catch (InvocationTargetException e) {
+					System.err.println("[LibraryLoader] ライブラリの読み込み時にエラーが発生しました");
+					e.printStackTrace();
+				} catch (MalformedURLException e) {
+					System.err.println("[LibraryLoader] ファイルの読み込み時にエラーが発生しました");
+					e.printStackTrace();
+				}
+			}
+		} catch (SecurityException e) {
+			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			System.err.println("[LibraryLoader] 本ソフトはご利用のバージョンに未対応です");
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			System.err.println("[LibraryLoader] 不明なエラーが発生しました");
+			e.printStackTrace();
 		}
 	}
 

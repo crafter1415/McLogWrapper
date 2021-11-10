@@ -19,6 +19,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mkm75.mclw.betterlogging.BetterLogging;
+import com.mkm75.mclw.betterlogging.Langs;
+import com.mkm75.mclw.mclogwrapper.extensions.Config;
 import com.mkm75.mclw.mclogwrapper.extensions.Extensions;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.Initializable;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.LogWrapperExtension;
@@ -43,6 +45,8 @@ public class BetterLoggingIntegr implements Initializable {
 	}
 
 	public void postInitialize() {
+		Config config = ((LangUtil)Extensions.extensions.get(LangUtil.NAME).getInstance()).config;
+		if (config.get("lang", String.class) != null) Langs.language=config.get("lang", String.class);
 		LangUtil lu = (LangUtil) Extensions.extensions.get(LangUtil.NAME).getInstance();
 		if (lu.version_changed) {
 			try {

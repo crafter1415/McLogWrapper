@@ -14,6 +14,7 @@ import com.mkm75.mclw.mclogwrapper.extensions.Config;
 import com.mkm75.mclw.mclogwrapper.extensions.Extensions;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.Initializable;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.LogWrapperExtension;
+import com.mkm75.mclw.mclogwrapper.extensions.interfaces.ServerStateEvents;
 import com.mkm75.mclw.mclogwrapper.extensions.interfaces.UseConfig;
 
 import net.dv8tion.jda.api.JDA;
@@ -23,8 +24,8 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageChannel;
 
 @LogWrapperExtension(major_version = MCDiscordIntegration.MAJOR_VERSION, minor_version = MCDiscordIntegration.MINOR_VERSION,
-					name = MCDiscordIntegration.NAME, requirements_name = { BetterLogging.NAME }, requirements_version = { 0 })
-public class MCDiscordIntegration implements UseConfig, Initializable {
+					name = MCDiscordIntegration.NAME, requirements_name = { BetterLogging.NAME, LangUtil.NAME }, requirements_version = { 0, 0 })
+public class MCDiscordIntegration implements UseConfig, Initializable, ServerStateEvents {
 
 	public static final double MAJOR_VERSION = 0;
 	public static final double MINOR_VERSION = 0;
@@ -40,8 +41,8 @@ public class MCDiscordIntegration implements UseConfig, Initializable {
 	public Config reserveConfigs() {
 		config = new Config();
 		config.reserve("token", "");
-		config.reserve("server_id", 0L);
-		config.reserve("channel_id", 0L);
+		config.reserve("server_id", "");
+		config.reserve("channel_id", "");
 		JsonObject jo = new JsonObject();
 		jo.addProperty("version", ":information_source: **サーバーのバージョン：`{version}`**");
 		jo.addProperty("done", ":arrow_forward: **サーバーが起動しました**");
@@ -53,8 +54,8 @@ public class MCDiscordIntegration implements UseConfig, Initializable {
 		jo.addProperty("emote", "＊ `{player}` {message}");
 		jo.addProperty("achievement", ":trophy: {info}");
 		jo.addProperty("advancement.task", ":trophy: {info}");
-		jo.addProperty("achievement.goal", ":trophy: {info}");
-		jo.addProperty("achievement.challenge", ":trophy: {info}");
+		jo.addProperty("advancement.goal", ":trophy: {info}");
+		jo.addProperty("advancement.challenge", ":trophy: {info}");
 		jo.addProperty("death", ":skull: {info}");
 		config.reserve("chat", jo);
 
@@ -79,8 +80,8 @@ public class MCDiscordIntegration implements UseConfig, Initializable {
 		try {
 			api = JDABuilder.createDefault(config.get("token", String.class)).build();
 			api.awaitReady();
-			Guild guild = api.getGuildById(config.get("server_id", Long.class));
-			channel = guild.getTextChannelById(config.get("channel_id", Long.class));
+			Guild guild = api.getGuildById(config.get("server_id", String.class));
+			channel = guild.getTextChannelById(config.get("channel_id", String.class));
 			String ver = ((LangUtil) Extensions.extensions.get(LangUtil.NAME).getInstance()).mc_ver;
 			channel.sendMessage(config.get("chat", JsonObject.class).get("version").getAsString().replace("{version}", ver)).queue();
 			api.addEventListener(listener);
@@ -99,26 +100,33 @@ public class MCDiscordIntegration implements UseConfig, Initializable {
 		listener.channel=channel;
 		function.chat_format = config.get("chat", JsonObject.class);
 		function.channel=channel;
+		appendMsgFunction(function::msgpredicate);
+		appendLogFunction(function::logfunction);
 	}
 
 	public void appendLogFunction(Function<LogEvent, Message> function) {
 		if (!listener.logfunctions.contains(function)) listener.logfunctions.add(function);
 	}
+
 	public void insertLogFunction(Function<LogEvent, Message> function) {
 		if (!listener.logfunctions.contains(function)) listener.logfunctions.add(0, function);
 	}
 
-	/**
-	 * 処理に成功した場合trueを返す必要があります。
-	 */
 	public void appendMsgFunction(Predicate<Message> predicate) {
 		if (!listener.eventpredicates.contains(predicate)) listener.eventpredicates.add(predicate);
 	}
-	/**
-	 * 処理に成功した場合trueを返す必要があります。
-	 */
+
 	public void insertMsgFunction(Predicate<Message> predicate) {
 		if (!listener.eventpredicates.contains(predicate)) listener.eventpredicates.add(0, predicate);
+	}
+
+	public void onDone() {
+		function.onDone();
+	}
+
+	public void onStop() {
+		function.onStop();
+		api.shutdown();
 	}
 
 }

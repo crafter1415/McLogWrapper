@@ -8,9 +8,7 @@
 
 // Apply the java-library plugin to add support for Java Library
 plugins {
-	id 'application'
     id 'java-library'
-    id 'com.github.johnrengelman.shadow' version '5.0.0'
 }
 
 // In this section you declare where to find the dependencies of your project
@@ -50,25 +48,9 @@ compileJava {
    	options.encoding = 'UTF-8'
 }
 
-mainClassName = ''
-
 sourceCompatibility = 8
 targetCompatibility = 8
-
 
 javadoc {
     options.addStringOption('encoding', 'UTF-8')
 }
-
-shadowJar {
-	dependencies {
-	    exclude(dependency('org.apache.commons:commons-math3:3.6.1'))
-	    exclude(dependency('com.google.guava:guava:23.0'))
-	    exclude(dependency('junit:junit:4.12'))
-	    exclude(project(':MCLogWrapper'))
-	    exclude(project(':BetterLogging'))
-	    exclude(project(':LangUtil'))
-	    exclude(dependency('com.google.code.gson:gson:2.8.8'))
-	}
-}
-

@@ -328,7 +328,7 @@ public class BetterLogging implements Initializable {
 		boolean percent=false;
 		for (char ch : chs) {
 			if (percent) {
-				if ('0'<ch & ch<='9') max=ch-'0';
+				if ('0'<ch & ch<='9') max=(max<ch-'0'?ch-'0':max);
 				if (ch=='s'|ch=='S'|ch=='d'|ch=='D') cur++;
 				percent=false;
 			} else {

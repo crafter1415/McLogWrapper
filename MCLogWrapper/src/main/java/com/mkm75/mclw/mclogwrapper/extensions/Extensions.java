@@ -249,7 +249,15 @@ public class Extensions {
 		loadDir0(dir, list);
 
 		List<URL> list1 = new ArrayList<>();
-		URLClassLoader cl = new URLClassLoader(list.toArray(new URL[list.size()]));
+		URL urls[] = new URL[list.size()];
+		for (int i=0;i<urls.length;i++) {
+			try {
+				urls[i]=list.get(i).toURI().toURL();
+			} catch (MalformedURLException e) {
+				urls[i]=null;
+			}
+		}
+		URLClassLoader cl = new URLClassLoader(urls);
 		file:
 		for (File src : list) {
 			try {

@@ -321,7 +321,7 @@ public class Extensions {
 			}
 		} else {
 			String name = dir.getName();
-			if (!name.substring(name.indexOf('.')).equalsIgnoreCase(".jar")) return;
+			if (!name.substring(name.lastIndexOf('.')).equalsIgnoreCase(".jar")) return;
 			try {
 				urls.add(dir.toURI().toURL());
 			} catch (MalformedURLException e) {

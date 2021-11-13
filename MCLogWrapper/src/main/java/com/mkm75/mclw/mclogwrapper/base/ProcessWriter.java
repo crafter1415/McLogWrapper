@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -50,7 +51,7 @@ public class ProcessWriter {
 	public void run() {
 		Objects.requireNonNull(stream, "Stream is null");
 		try {
-			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(stream));
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(stream, StandardCharsets.UTF_8));
 			while (true) {
 				try {
 					Thread.sleep(100);

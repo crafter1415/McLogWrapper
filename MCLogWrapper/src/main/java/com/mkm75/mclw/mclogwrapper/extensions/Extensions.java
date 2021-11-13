@@ -245,15 +245,16 @@ public class Extensions {
 
 
 	private static void loadDir(File dir) {
-		List<URL> list = new ArrayList<>();
+		List<File> list = new ArrayList<>();
 		loadDir0(dir, list);
 
 		List<URL> list1 = new ArrayList<>();
 		URLClassLoader cl = new URLClassLoader(list.toArray(new URL[list.size()]));
 		file:
-		for (URL url : list) {
+		for (File src : list) {
 			try {
-				JarFile jf = new JarFile(url.getFile());
+				JarFile jf = new JarFile(src);
+
 				Enumeration<JarEntry> entries = jf.entries();
 				while (entries.hasMoreElements()) {
 					try {
@@ -265,18 +266,18 @@ public class Extensions {
 						Annotation annotations[] = loaded.getAnnotations();
 						for (Annotation annotation : annotations) {
 							if (annotation.annotationType().equals(LogWrapperExtension.class)) {
-								extensions_dummy.add(new Extension(new File(url.getFile()), loaded));
+								extensions_dummy.add(new Extension(src, loaded));
 							}
 						}
 					} catch (LinkageError e) {
-						System.out.println("[ClassLoader] Exception occured while loading "+url.getFile());
+						System.out.println("[ClassLoader] Exception occured while loading "+src);
 						e.printStackTrace();
 						continue file;
 					} catch (ClassNotFoundException e) {
 						continue;
 					}
 				}
-				list1.add(url);
+				list1.add(src.toURI().toURL());
 				jf.close();
 			} catch (IOException e1) {
 				continue;
@@ -314,7 +315,7 @@ public class Extensions {
 			e.printStackTrace();
 		}
 	}
-	private static void loadDir0(File dir, List<URL> urls) {
+	private static void loadDir0(File dir, List<File> urls) {
 		if (dir.isDirectory()) {
 			for (File file : dir.listFiles()) {
 				loadDir0(file, urls);
@@ -322,11 +323,7 @@ public class Extensions {
 		} else {
 			String name = dir.getName();
 			if (!name.substring(name.lastIndexOf('.')).equalsIgnoreCase(".jar")) return;
-			try {
-				urls.add(dir.toURI().toURL());
-			} catch (MalformedURLException e) {
-				return;
-			}
+			urls.add(dir);
 		}
 	}
 

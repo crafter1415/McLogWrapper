@@ -9,12 +9,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -83,6 +83,7 @@ public class Extensions {
 	public static Map<String, Extension> extensions = new HashMap<>();
 
 	public static void load() {
+		initContextClassloader();
 		System.out.println("[ExtensionLoader] ライブラリ読み込み開始");
 		if (!Settings.LibraryFolder.exists()) Settings.LibraryFolder.mkdir();
 		loadLib(Settings.LibraryFolder);
@@ -243,6 +244,24 @@ public class Extensions {
 		System.out.println("[ConfigLoader] コンフィグが保存されました");
 	}
 
+	private static URLClassLoader loader;
+	private static void initContextClassloader() {
+		Thread thread = Thread.currentThread();
+		ClassLoader cl = thread.getContextClassLoader();
+		if (cl instanceof URLClassLoader) {
+			loader=(URLClassLoader)cl;
+		} else {
+			URLClassLoader ucl = new URLClassLoader(new URL[0], cl);
+			thread.setContextClassLoader(ucl);
+			loader=ucl;
+		}
+	}
+	// 必要最低限の呼び出しにすること
+	protected static void addURL(URL ... urls) {
+		Thread thread = Thread.currentThread();
+		loader = new URLClassLoader(urls, thread.getContextClassLoader());
+		thread.setContextClassLoader(loader);
+	}
 
 	private static void loadDir(File dir) {
 		List<File> list = new ArrayList<>();
@@ -297,31 +316,7 @@ public class Extensions {
 			e.printStackTrace();
 		}
 
-		try {
-			URLClassLoader cl2 = (URLClassLoader) ClassLoader.getSystemClassLoader();
-			Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-			method.setAccessible(true);
-			for (URL url : list1) {
-				try {
-					method.invoke(cl2, url);
-				} catch (InvocationTargetException e) {
-					System.err.println("[LibraryLoader] ライブラリの読み込み時にエラーが発生しました");
-					e.printStackTrace();
-				}
-			}
-		} catch (SecurityException e) {
-			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			System.err.println("[LibraryLoader] 本ソフトはご利用のバージョンに未対応です");
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			System.err.println("[LibraryLoader] 不明なエラーが発生しました");
-			e.printStackTrace();
-		}
+		addURL(list1.toArray(new URL[list1.size()]));
 	}
 	private static void loadDir0(File dir, List<File> urls) {
 		if (dir.isDirectory()) {
@@ -337,31 +332,24 @@ public class Extensions {
 
 	private static void loadLib(File dir) {
 		try {
-			URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
-			Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-			method.setAccessible(true);
-			for (File file : dir.listFiles()) {
+			URL url[] = Files.list(dir.toPath()).map(Path::toFile).filter(File::isFile).filter(f->{
 				try {
-					method.invoke(cl, file.toURI().toURL());
-				} catch (InvocationTargetException e) {
-					System.err.println("[LibraryLoader] ライブラリの読み込み時にエラーが発生しました");
-					e.printStackTrace();
-				} catch (MalformedURLException e) {
-					System.err.println("[LibraryLoader] ファイルの読み込み時にエラーが発生しました");
-					e.printStackTrace();
+					JarFile file = new JarFile(f);
+					file.close();
+					return true;
+				} catch (IOException e) {
+					return false;
 				}
-			}
-		} catch (SecurityException e) {
-			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			System.err.println("[LibraryLoader] 本ソフトはご利用のバージョンに未対応です");
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			System.err.println("[LibraryLoader] Java Runtime規制によりライブラリをロードできませんでした");
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			System.err.println("[LibraryLoader] 不明なエラーが発生しました");
+			}).map(f->{
+				try {
+					return f.toURI().toURL();
+				} catch (MalformedURLException e) {
+					return null;
+				}
+			}).toArray(URL[]::new);
+			addURL(url);
+		} catch (IOException e) {
+			System.err.println("[LibraryLoader] ライブラリの読み込み時にエラーが発生しました");
 			e.printStackTrace();
 		}
 	}

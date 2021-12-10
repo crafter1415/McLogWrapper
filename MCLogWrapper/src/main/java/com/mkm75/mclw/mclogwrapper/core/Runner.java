@@ -15,6 +15,9 @@ public class Runner {
 
 	public static void main(String args[]) {
 		try {
+			System.out.println("[MCLW/WARN] **Is your server patched?** Log4j exploit could easily damage your device, take care and DO NOT LAUNCH SERVER IF YOUR SERVER IS UNPATCHED!!");
+			System.out.println("[MCLW/警告] **サーバーはパッチ済ですか？** Log4jの脆弱性はとても危険なものであり、貴方のデバイスが簡単に傷つけられる危険性があります。パッチの適用が済んでいない限りサーバーを実行しないでください！");
+			System.out.println("[MCLW/INFO] 脆弱性対策の為10秒後に起動を開始します / Server will boot 10 sec later");
 			Extensions.load();
 			Runtime rt = Runtime.getRuntime();
 			long Xmx=rt.maxMemory()/1048576;
@@ -23,6 +26,7 @@ public class Runner {
 			arg2.add(System.getProperty("java.home").replace('\\', '/') + "/bin/java.exe");
 			arg2.add("-Xms"+Xms+"m");
 			arg2.add("-Xmx"+Xmx+"m");
+			arg2.add("-Dlog4j2.formatMsgNoLookups=true");
 			arg2.add("-jar");
 			arg2.add(SERVER);
 			arg2.add("nogui");

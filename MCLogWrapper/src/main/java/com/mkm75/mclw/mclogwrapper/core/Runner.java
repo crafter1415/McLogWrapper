@@ -24,12 +24,12 @@ public class Runner {
 			arg2.add("-Xms"+Xms+"m");
 			arg2.add("-Xmx"+Xmx+"m");
 			boolean log4jprotect=false;
-			if (System.getenv("log4j2.formatMsgNoLookups") != null) {
-				arg2.add("-Dlog4j2.formatMsgNoLookups="+System.getenv("log4j2.formatMsgNoLookups"));
+			if (System.getProperty("log4j2.formatMsgNoLookups") != null) {
+				arg2.add("-Dlog4j2.formatMsgNoLookups="+System.getProperty("log4j2.formatMsgNoLookups"));
 				log4jprotect=true;
 			}
-			if (System.getenv("log4j.configurationFile") != null) {
-				arg2.add("-Dlog4j.configurationFile="+System.getenv("log4j.configurationFile"));
+			if (System.getProperty("log4j.configurationFile") != null) {
+				arg2.add("-Dlog4j.configurationFile="+System.getProperty("log4j.configurationFile"));
 				log4jprotect=true;
 			}
 			arg2.add("-Dlog4j2.formatMsgNoLookups=true");

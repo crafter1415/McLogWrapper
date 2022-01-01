@@ -13,8 +13,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -276,7 +274,7 @@ public class Extensions {
 				urls[i]=null;
 			}
 		}
-		URLClassLoader cl = new URLClassLoader(urls);
+		URLClassLoader cl = new URLClassLoader(urls, Thread.currentThread().getContextClassLoader());
 		file:
 		for (File src : list) {
 			try {
@@ -331,27 +329,18 @@ public class Extensions {
 	}
 
 	private static void loadLib(File dir) {
-		try {
-			URL url[] = Files.list(dir.toPath()).map(Path::toFile).filter(File::isFile).filter(f->{
-				try {
-					JarFile file = new JarFile(f);
-					file.close();
-					return true;
-				} catch (IOException e) {
-					return false;
-				}
-			}).map(f->{
-				try {
-					return f.toURI().toURL();
-				} catch (MalformedURLException e) {
-					return null;
-				}
-			}).toArray(URL[]::new);
-			addURL(url);
-		} catch (IOException e) {
-			System.err.println("[LibraryLoader] ライブラリの読み込み時にエラーが発生しました");
-			e.printStackTrace();
+		List<File> list = new ArrayList<>();
+		loadDir0(dir, list);
+
+		List<URL> urls = new ArrayList<>();
+		for (File file : list) {
+			try {
+				urls.add(file.toURI().toURL());
+			} catch (MalformedURLException e) {
+			}
 		}
+
+		addURL(urls.toArray(new URL[urls.size()]));
 	}
 
 	private static void loadSystemExtension() {
